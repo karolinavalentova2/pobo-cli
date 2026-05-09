@@ -1,33 +1,167 @@
-# @pobo/cli — public build artifact
+# Pobo CLI
 
-This repository is the **compiled output** of [`@pobo/cli`](https://www.npmjs.com/package/@pobo/cli), published here as a transparency mirror so anyone can audit the JavaScript that ships to npm.
+CLI tool for creating widgets for Pobo Page Builder locally in your editor (HTML + SCSS) instead of through the admin UI.
 
-The source code is private. This repo is the build artifact — it contains the same files that the npm tarball contains.
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
+[![Node](https://img.shields.io/badge/node-%E2%89%A520.12-brightgreen.svg)](https://nodejs.org/)
+[![npm](https://img.shields.io/npm/v/@pobo/cli.svg)](https://www.npmjs.com/package/@pobo/cli)
+
+> **About this repository:** This is the public **build artifact mirror** of [`@pobo/cli`](https://www.npmjs.com/package/@pobo/cli). Source code lives in a private repository; this mirror exists so anyone can audit the JavaScript that ships to npm. The contents here are produced by the same release pipeline that publishes to npm, and you can verify integrity by comparing `npm pack @pobo/cli@1.0.3` against this repo at tag `v1.0.3`.
+
+---
 
 ## Install
 
 ```bash
+# npm
 npm install -g @pobo/cli
+
+# yarn (classic v1)
+yarn global add @pobo/cli
 ```
 
-The package on npm and the contents of this repository are produced from the same release pipeline. To verify, compare a tagged commit here against the matching version on npm:
+## Requirements
+
+- **Node.js ≥ 20.12**
+- A Pobo account with at least one e-shop
+
+## Quickstart
 
 ```bash
-npm pack @pobo/cli@1.0.2
-# unpack the tarball and diff its contents against this repo at tag v1.0.2
+# 1) Sign in
+pobo auth login
+
+# 2) Create a widget (creates the widget on the server and scaffolds ./widgets/<id>/)
+pobo widget create
+
+# 3) Edit HTML/SCSS in your editor
+cd widgets/<id>
+$EDITOR <slug>-<id>.html
+$EDITOR <slug>-<id>.scss
+
+# 4) Validate and push
+pobo widget validate
+pobo widget push
+
+# 5) Connect the widget to an e-shop
+pobo widget connect
 ```
 
-## Documentation
+## Commands
 
-- npm package — https://www.npmjs.com/package/@pobo/cli
-- Bug reports & feature requests — https://github.com/pobo-builder/pobo-cli/issues
-- Changelog — see [CHANGELOG.md](./CHANGELOG.md)
+```text
+pobo auth login              Sign in with email and password
+pobo auth logout             Sign out
+pobo auth me                 Show current user info and available e-shops
+
+pobo widget list             List your widgets
+pobo widget create           Create a new widget on the server + local scaffold
+pobo widget show [id]        Show widget details from the server
+pobo widget push [id]        Push HTML + compiled SCSS to the server
+pobo widget validate [id]    Validate widget HTML server-side
+pobo widget connect [id]     Connect a widget to an e-shop
+pobo widget disconnect [id]  Disconnect a widget from an e-shop
+pobo widget connections      Show widget × e-shop connections matrix
+pobo widget flush [id]       Delete widget elements (widget itself stays)
+pobo widget delete [id]      Delete the widget from the server (cannot be undone)
+pobo widget proxy [url]      Live preview the widget on a real e-shop page
+
+pobo doctor                  Health check (env / config / connectivity / local widgets)
+pobo help                    Show help
+```
+
+Commands marked with `[id]` resolve the widget automatically when you run them from inside `widgets/<id>/`. Without an `id` argument and outside a widget folder, you get an interactive picker.
+
+`-y` / `--yes` skips confirmation prompts on destructive operations (`delete`, `flush`, `disconnect`) — useful in CI scripts.
+
+### Live preview (`pobo widget proxy`)
+
+```bash
+pobo widget proxy https://my-eshop.example.com --selector '.basic-description'
+```
+
+Starts a local HTTP server (default port `3001`, auto-falls back to next free port if busy). Opens the e-shop page in a browser; the widget HTML/CSS is injected into the element matching `--selector`. Saves to local `.html`/`.scss` trigger an SSE-driven auto-update in the browser — no manual reload, no upload to production.
+
+Run without arguments to start an interactive wizard that asks for the URL and selector.
+
+## Widget folder layout
+
+After `pobo widget create` (or after `pobo widget push` from existing files):
+
+```text
+widgets/<id>/
+├── widget.json               # metadata: id, name, root_class, html/scss filenames
+├── <slug>-<id>.html
+└── <slug>-<id>.scss
+```
+
+`widget.json` example:
+
+```json
+{
+  "id": 320,
+  "name": "Hero banner",
+  "root_class": "pb-cli-320-hero-banner",
+  "html": "hero-banner-320.html",
+  "scss": "hero-banner-320.scss"
+}
+```
+
+## HTML rules (server-side validation)
+
+**Allowed tags:** `div`, `a`, `h1`, `h2`, `h3`, `p`, `ul`, `li`, `span`, `img`, `textarea`, `aside`
+
+**Allowed attributes:**
+
+- universal: `class`
+- `<a>`: `class`, `href` (only `http://`, `https://`, `mailto:`, or absolute path `/foo`)
+- `<img>`: `class`, `src`, `alt`, `title`, `width`, `height`
+
+**Forbidden:** `<script>`, `<style>`, HTML comments, CDATA, inline event handlers (`onclick=`, `onerror=`, ...), URL schemes `javascript:`, `data:`, `file:`.
+
+**Limits:** 65 535 bytes of HTML, max 500 elements, max 5 000 chars in text, max 2 048 chars in URLs.
+
+## CSS / SCSS rules
+
+SCSS is compiled with `sass` (compressed output). The following constructs are forbidden in the final CSS:
+
+`@import`, `expression(`, `javascript:`, `vbscript:`, `behavior:`, `-moz-binding`.
+
+## Configuration
+
+After `pobo auth login`, the API URL and token are stored in `~/.pobo/config.json` (mode `0600` on POSIX). The CLI ships with the production API URL baked in, so a fresh install works out of the box — no environment setup needed.
+
+The `cli_token` is generated by the server at login and stored only as a SHA-256 hash on the server side. Logging in on another machine invalidates the previous session.
+
+## Troubleshooting
+
+Run `pobo doctor` first — it checks Node version, config file, API reachability, authentication, and local widgets, and tells you what's missing.
+
+| Error                   | Likely cause                                                                 |
+|-------------------------|------------------------------------------------------------------------------|
+| `Cannot connect to API` | API URL wrong, server not running, or network blocked                        |
+| `Not authenticated`     | Run `pobo auth login`                                                        |
+| `Invalid CLI token`     | Token rotated (you logged in elsewhere) — sign in again                      |
+| `HTML contains errors`  | Server validation rejected your markup — fix per the listed errors and retry |
+
+## Verifying this build
+
+Compare the npm tarball against this repo at the matching tag:
+
+```bash
+npm pack @pobo/cli@1.0.3            # downloads pobo-cli-1.0.3.tgz
+tar -xzf pobo-cli-1.0.3.tgz         # extracts ./package/
+diff -r package/ <this-repo-checkout>     # should be empty
+```
+
+The contents of this repository are produced from the same release pipeline that publishes to npm — both should be byte-identical at every tagged version.
+
+## Issues & feature requests
+
+[github.com/pobo-builder/pobo-cli/issues](https://github.com/pobo-builder/pobo-cli/issues)
+
+Pull requests are not accepted in this repository (it is a read-only mirror of build output). Open an issue if you want to discuss a change.
 
 ## License
 
-MIT — see [LICENSE](./LICENSE).
-
-## Notes
-
-- Pull requests are not accepted in this repository (it is a read-only mirror of build output). Open an issue if you want to discuss a change.
-- The build is produced from a private source repository. The compiled JavaScript here is what is shipped; sourcemaps are intentionally not included.
+[MIT](./LICENSE) © Pobo Builder s.r.o.
