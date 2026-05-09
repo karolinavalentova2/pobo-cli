@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2026-05-09
+
+### Fixed
+
+- **`pobo --version` and any version-aware code path** crashed with `ENOENT: no such file or directory ... @pobo/package.json` after a global install. Cause: CLI resolved `package.json` via a relative path that assumed the source `dist/<file>.js` layout, but the published tarball uses a flatten layout. The version is now baked at build time into `src/constants.generated.ts` (alongside the API URL), so no runtime filesystem lookup is needed.
+
 ## [1.0.0] - 2026-05-09
 
 First public stable release.

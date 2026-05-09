@@ -1,9 +1,7 @@
-import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { Command } from 'commander';
 import chalk from 'chalk';
 import Table from 'cli-table3';
+import { PUBLIC_VERSION } from './constants.generated.js';
 import { loginCommand } from './commands/auth/login.js';
 import { logoutCommand } from './commands/auth/logout.js';
 import { meCommand } from './commands/auth/me.js';
@@ -32,12 +30,6 @@ const wrap = (fn) => {
         }
     };
 };
-const readPackageVersion = () => {
-    const here = path.dirname(fileURLToPath(import.meta.url));
-    const pkgPath = path.resolve(here, '..', 'package.json');
-    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
-    return pkg.version;
-};
 const collectSubcommands = (cmd, indent = 0) => {
     const rows = [];
     for (const sub of cmd.commands) {
@@ -60,7 +52,7 @@ export const run = async (argv) => {
     program
         .name('pobo')
         .description('Pobo Page Builder CLI')
-        .version(readPackageVersion());
+        .version(PUBLIC_VERSION);
     const auth = program.command('auth').description('Authentication');
     auth.command('login').description('Sign in with email and password').action(wrap(loginCommand));
     auth.command('logout').description('Sign out').action(wrap(logoutCommand));
