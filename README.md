@@ -13,8 +13,8 @@ npm install -g @pobo/cli
 The package on npm and the contents of this repository are produced from the same release pipeline. To verify, compare a tagged commit here against the matching version on npm:
 
 ```bash
-npm pack @pobo/cli@1.0.1
-# unpack the tarball and diff its contents against this repo at tag v1.0.1
+npm pack @pobo/cli@1.0.2
+# unpack the tarball and diff its contents against this repo at tag v1.0.2
 ```
 
 ## Documentation

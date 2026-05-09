@@ -1,6 +1,6 @@
 {
   "name": "@pobo/cli",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "CLI tool for creating widgets for Pobo Page Builder",
   "keywords": [
     "pobo",
