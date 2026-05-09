@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.4] - 2026-05-09
+
+### Fixed
+
+- **Baked default API URL** corrected from `api.pbo.space` to `api.pobo.space`. Fresh installs now point at the correct production host out of the box. Existing installs that have an explicit `api_url` in `~/.pobo/config.json` are unaffected.
+
+## [1.0.3] - 2026-05-09
+
+### Changed
+
+- **Public README** (`pobo-builder/pobo-cli` mirror) expanded with full command reference, quickstart, widget folder layout, HTML/CSS rules, troubleshooting table, and verify-this-build instructions. Drops the env-var configuration section since the production API URL is baked at build time.
+
 ## [1.0.2] - 2026-05-09
 
 ### Added

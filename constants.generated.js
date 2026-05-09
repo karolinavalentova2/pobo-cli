@@ -4,5 +4,5 @@
 //
 // Note: at runtime, both POBO_API_URL (highest priority) and
 // POBO_DEFAULT_API_URL still take precedence over this baked value.
-export const PUBLIC_DEFAULT_API_URL = "https://api.pbo.space/api/v3/cli";
-export const PUBLIC_VERSION = "1.0.3";
+export const PUBLIC_DEFAULT_API_URL = "https://api.pobo.space/api/v3/cli";
+export const PUBLIC_VERSION = "1.0.4";
