@@ -19,7 +19,7 @@
   },
   "type": "module",
   "bin": {
-    "pobo": "./bin/pobo.js"
+    "pobo": "bin/pobo.js"
   },
   "engines": {
     "node": ">=20.12.0"
