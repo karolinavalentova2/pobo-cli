@@ -1,3 +1,4 @@
+import path from 'node:path';
 import chalk from 'chalk';
 import { input, select } from '@inquirer/prompts';
 import { api } from '../../api.js';
@@ -26,9 +27,15 @@ export const createCommand = async () => {
         name: widget.name,
         rootClass: widget.root_class,
     });
+    const cwd = process.cwd();
+    const rel = (abs) => {
+        const r = path.relative(cwd, abs) || abs;
+        return r.split(path.sep).join('/');
+    };
     console.log(chalk.green(sprintf('✓ Widget created (ID %s, class %s).', widget.id, widget.root_class)));
     console.log(chalk.gray('Local files:'));
-    console.log(sprintf('  %s', scaffold.htmlFile));
-    console.log(sprintf('  %s', scaffold.scssFile));
-    console.log(sprintf('  %s', scaffold.metaFile));
+    console.log(sprintf('  %s', rel(scaffold.htmlFile)));
+    console.log(sprintf('  %s', rel(scaffold.scssFile)));
+    console.log(sprintf('  %s', rel(scaffold.cssPreviewFile)));
+    console.log(sprintf('  %s', rel(scaffold.metaFile)));
 };

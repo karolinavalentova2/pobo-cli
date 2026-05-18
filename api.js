@@ -1,6 +1,7 @@
 import { getApiUrl } from './config.js';
 import { sprintf } from './utils/sprintf.js';
 const REQUEST_TIMEOUT_MS = 30_000;
+const AI_REQUEST_TIMEOUT_MS = 65_000;
 export class ApiError extends Error {
     status;
     data;
@@ -59,19 +60,25 @@ export const parseJsonLoose = (text) => {
         return { raw: text };
     }
 };
-const request = async (method, path, { body = null, token = null, apiUrl = null } = {}) => {
+const request = async (method, path, { body = null, rawBody, token = null, apiUrl = null, timeoutMs } = {}) => {
     const url = sprintf('%s%s', apiUrl ?? getApiUrl(null), path);
     const headers = {
         'Accept': 'application/json',
-        'Content-Type': 'application/json',
     };
+    if (!rawBody) {
+        headers['Content-Type'] = 'application/json';
+    }
     if (token) {
         headers['Authorization'] = sprintf('Bearer %s', token);
     }
+    const effectiveTimeout = timeoutMs ?? REQUEST_TIMEOUT_MS;
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    const timeout = setTimeout(() => controller.abort(), effectiveTimeout);
     const init = { method, headers, signal: controller.signal };
-    if (body !== null) {
+    if (rawBody !== undefined) {
+        init.body = rawBody;
+    }
+    else if (body !== null) {
         init.body = JSON.stringify(body);
     }
     let response;
@@ -80,7 +87,7 @@ const request = async (method, path, { body = null, token = null, apiUrl = null 
     }
     catch (e) {
         if (e instanceof Error && e.name === 'AbortError') {
-            throw new Error(sprintf('API did not respond within %ss (%s).', REQUEST_TIMEOUT_MS / 1000, url), { cause: e });
+            throw new Error(sprintf('API did not respond within %ss (%s).', effectiveTimeout / 1000, url), { cause: e });
         }
         const message = e instanceof Error ? e.message : String(e);
         throw new Error(sprintf('Cannot connect to API (%s): %s', url, message), { cause: e });
@@ -115,9 +122,15 @@ export const api = {
         const body = { widget };
         return request('POST', sprintf('/widget/%s/push', id), { token, body, apiUrl });
     },
-    updateStyle: (token, id, args, apiUrl) => {
-        const body = { style: args.style, html_preview: args.htmlPreview };
-        return request('PUT', sprintf('/widget/%s/style', id), { token, body, apiUrl });
+    updateCss: (token, id, args, apiUrl) => {
+        const body = { css: args.css };
+        if (args.scss !== undefined)
+            body.scss = args.scss;
+        if (args.cssPreview !== undefined)
+            body.css_preview = args.cssPreview;
+        if (args.htmlSource !== undefined)
+            body.html_source = args.htmlSource;
+        return request('PUT', sprintf('/widget/%s/css', id), { token, body, apiUrl });
     },
     flushWidget: (token, id, apiUrl) => request('DELETE', sprintf('/widget/%s/flush', id), { token, apiUrl }),
     connectWidget: (token, id, eshopId, apiUrl) => {
@@ -129,5 +142,15 @@ export const api = {
     disconnectWidget: (token, id, eshopId, apiUrl) => {
         const body = { eshop_id: eshopId };
         return request('POST', sprintf('/widget/%s/disconnect', id), { token, body, apiUrl });
+    },
+    generateWidgetAi: (token, id, image, apiUrl) => {
+        const formData = new FormData();
+        formData.append('image', image.blob, image.filename);
+        return request('POST', sprintf('/widget/%s/ai', id), {
+            token,
+            rawBody: formData,
+            apiUrl,
+            timeoutMs: AI_REQUEST_TIMEOUT_MS,
+        });
     },
 };

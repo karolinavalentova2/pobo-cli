@@ -2,9 +2,11 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import Table from 'cli-table3';
 import { PUBLIC_VERSION } from './constants.generated.js';
+import { startRepl } from './repl.js';
 import { loginCommand } from './commands/auth/login.js';
 import { logoutCommand } from './commands/auth/logout.js';
 import { meCommand } from './commands/auth/me.js';
+import { aiCommand } from './commands/widget/ai.js';
 import { createCommand } from './commands/widget/create.js';
 import { deleteCommand } from './commands/widget/delete.js';
 import { pushCommand } from './commands/widget/push.js';
@@ -13,11 +15,14 @@ import { connectCommand } from './commands/widget/connect.js';
 import { connectionsCommand } from './commands/widget/connections.js';
 import { disconnectCommand } from './commands/widget/disconnect.js';
 import { flushCommand } from './commands/widget/flush.js';
+import { previewCommand } from './commands/widget/preview.js';
 import { proxyCommand } from './commands/widget/proxy.js';
 import { listCommand } from './commands/widget/list.js';
 import { showCommand } from './commands/widget/show.js';
 import { doctorCommand } from './commands/system/doctor.js';
+import { initCommand } from './commands/system/init.js';
 import { sprintf } from './utils/sprintf.js';
+let inRepl = false;
 const wrap = (fn) => {
     return async (...args) => {
         try {
@@ -26,7 +31,9 @@ const wrap = (fn) => {
         catch (e) {
             const message = e instanceof Error ? e.message : String(e);
             console.error(chalk.red(sprintf('Error: %s', message)));
-            process.exit(1);
+            if (!inRepl) {
+                process.exit(1);
+            }
         }
     };
 };
@@ -47,7 +54,7 @@ const collectSubcommands = (cmd, indent = 0) => {
     }
     return rows;
 };
-export const run = async (argv) => {
+const buildProgram = () => {
     const program = new Command();
     program
         .name('pobo')
@@ -60,6 +67,12 @@ export const run = async (argv) => {
     const widget = program.command('widget').description('Widget management');
     widget.command('list').description('List your widgets').action(wrap(listCommand));
     widget.command('create').description('Create a new widget').action(wrap(createCommand));
+    widget
+        .command('ai [id]')
+        .description('Generate widget HTML/SCSS from an image via Claude (server-side)')
+        .requiredOption('-i, --image <path>', 'image file (PNG/JPG/WebP, ≤ 5 MB)')
+        .option('-f, --force', 'overwrite local files without confirmation prompt')
+        .action(wrap((id, options) => aiCommand({ id, image: options.image, force: options.force })));
     widget
         .command('show [id]')
         .description('Show widget details from server')
@@ -75,11 +88,11 @@ export const run = async (argv) => {
         .action(wrap((id) => validateCommand({ id })));
     widget
         .command('connect [id]')
-        .description('Connect widget to an e-shop')
+        .description('Connect widget to one or more e-shops')
         .action(wrap((id) => connectCommand({ id })));
     widget
         .command('disconnect [id]')
-        .description('Disconnect widget from an e-shop')
+        .description('Disconnect widget from one or more e-shops')
         .option('-y, --yes', 'skip confirmation prompt')
         .action(wrap((id, options) => disconnectCommand({ id, yes: options.yes })));
     widget
@@ -97,19 +110,30 @@ export const run = async (argv) => {
         .option('-y, --yes', 'skip confirmation prompt')
         .action(wrap((id, options) => deleteCommand({ id, yes: options.yes })));
     widget
+        .command('preview [id]')
+        .description('Open widget preview in browser')
+        .option('--no-open', 'do not auto-open the preview URL in the browser')
+        .action(wrap((id, options) => previewCommand({ id, open: options.open })));
+    widget
         .command('proxy [url]')
         .description('Live preview widget on an e-shop page (wizard if no URL)')
         .option('-p, --port <port>', 'Preview server port', '3001')
         .option('-s, --selector <selector>', 'CSS selector for widget injection target', '.basic-description')
+        .option('--no-open', 'do not auto-open the preview URL in the browser')
         .action(wrap((url, options) => proxyCommand({
         url,
         port: parseInt(options.port, 10),
         selector: options.selector,
+        open: options.open,
     })));
     program
         .command('doctor')
         .description('Health check: environment, config, connectivity, local widgets')
         .action(wrap(doctorCommand));
+    program
+        .command('init')
+        .description('Write CLAUDE.md to the current directory for Claude Code widget creation context')
+        .action(wrap(initCommand));
     program.addHelpText('after', () => {
         const rows = collectSubcommands(program);
         if (rows.length === 0)
@@ -124,5 +148,15 @@ export const run = async (argv) => {
         }
         return sprintf('\nAll commands (recursive):\n%s\n', table.toString());
     });
+    return program;
+};
+export const run = async (argv) => {
+    const userArgs = argv.slice(2);
+    if (userArgs.length === 0 && process.stdin.isTTY) {
+        inRepl = true;
+        await startRepl(buildProgram);
+        return;
+    }
+    const program = buildProgram();
     await program.parseAsync(argv);
 };

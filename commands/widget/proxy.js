@@ -5,6 +5,7 @@ import path from 'node:path';
 import fs from 'node:fs';
 import chalk from 'chalk';
 import chokidar from 'chokidar';
+import open from 'open';
 import { input } from '@inquirer/prompts';
 import { compileScss } from '../../lib/scss-compiler.js';
 import { resolveOrPick } from '../../lib/widget-picker.js';
@@ -123,7 +124,7 @@ const injectIntoPage = (pageHtml, parsedUrl, port, selector) => {
     modified = modified.replace('</body>', `${liveReloadScript(port, selector)}</body>`);
     return modified;
 };
-export const proxyCommand = async ({ url, port, selector }) => {
+export const proxyCommand = async ({ url, port, selector, open: shouldOpen }) => {
     let resolvedUrl = url;
     let resolvedSelector = selector ?? '.basic-description';
     if (!resolvedUrl) {
@@ -195,15 +196,29 @@ export const proxyCommand = async ({ url, port, selector }) => {
             pushUpdate(clients, buildState(htmlFile, currentCss));
         }, 100);
     });
+    const previewUrl = sprintf('http://localhost:%s', actualPort);
     server.listen(actualPort, () => {
-        console.log('');
-        console.log(chalk.green('  ✓ Pobo Preview Server running'));
-        console.log(chalk.gray(sprintf('    http://localhost:%s', actualPort)));
-        console.log('');
-        console.log(chalk.gray('  Edit:'));
-        console.log(chalk.gray(sprintf('    %s', widget.meta.html)));
-        console.log(chalk.gray(sprintf('    %s', widget.meta.scss)));
-        console.log('');
+        void (async () => {
+            console.log('');
+            console.log(chalk.green('  ✓ Pobo Preview Server running'));
+            console.log(chalk.gray(sprintf('    %s', previewUrl)));
+            console.log('');
+            console.log(chalk.gray('  Edit:'));
+            console.log(chalk.gray(sprintf('    %s', widget.meta.html)));
+            console.log(chalk.gray(sprintf('    %s', widget.meta.scss)));
+            console.log('');
+            if (!shouldOpen) {
+                return;
+            }
+            try {
+                await open(previewUrl);
+            }
+            catch (e) {
+                const message = e instanceof Error ? e.message : String(e);
+                console.log(chalk.yellow(sprintf('  Could not auto-open browser: %s', message)));
+                console.log(chalk.gray(sprintf('  Open %s manually, or rerun with --no-open to skip.', previewUrl)));
+            }
+        })();
     });
     const cleanup = () => {
         void watcher.close();

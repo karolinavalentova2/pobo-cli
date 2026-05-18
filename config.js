@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { sprintf } from './utils/sprintf.js';
-import { PUBLIC_DEFAULT_API_URL } from './constants.generated.js';
+import { PUBLIC_DEFAULT_API_URL, PUBLIC_DEFAULT_FRONTEND_URL } from './constants.generated.js';
 const DEFAULT_API_URL = process.env.POBO_DEFAULT_API_URL ?? PUBLIC_DEFAULT_API_URL;
 const getConfigDir = () => path.join(os.homedir(), '.pobo');
 const getConfigPath = () => path.join(getConfigDir(), 'config.json');
@@ -18,6 +18,7 @@ export const getApiUrl = (config) => {
     }
     throw new Error('No API URL configured. Set POBO_API_URL or POBO_DEFAULT_API_URL (e.g. in .env), or run `pobo auth login` to save api_url to ~/.pobo/config.json.');
 };
+export const getFrontendUrl = () => process.env.POBO_FRONTEND_URL ?? PUBLIC_DEFAULT_FRONTEND_URL;
 export const readConfig = () => {
     const file = getConfigPath();
     if (!fs.existsSync(file)) {

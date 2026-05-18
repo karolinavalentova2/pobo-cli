@@ -1,8 +1,11 @@
 // Generated at build time. Do not edit.
-// Override the baked default by setting POBO_DEFAULT_API_URL in the build env:
+// Override the baked defaults by setting env vars in the build env:
 //   POBO_DEFAULT_API_URL=https://example-staging-api/api/v3/cli yarn build
+//   POBO_FRONTEND_URL=https://example-staging-client yarn build
 //
-// Note: at runtime, both POBO_API_URL (highest priority) and
-// POBO_DEFAULT_API_URL still take precedence over this baked value.
+// Note: at runtime, POBO_API_URL (highest priority) and POBO_DEFAULT_API_URL
+// still take precedence over the baked API URL. POBO_FRONTEND_URL takes
+// precedence over the baked frontend URL.
 export const PUBLIC_DEFAULT_API_URL = "https://api.pobo.space/api/v3/cli";
-export const PUBLIC_VERSION = "1.0.4";
+export const PUBLIC_DEFAULT_FRONTEND_URL = "https://client.pobo.space";
+export const PUBLIC_VERSION = "2.0.0";

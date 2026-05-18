@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import chalk from 'chalk';
 import { select } from '@inquirer/prompts';
 import ora from 'ora';
@@ -5,7 +6,7 @@ import { api } from '../../api.js';
 import { connectCommand } from '../../commands/widget/connect.js';
 import { requireToken } from '../../config.js';
 import { compileScss } from '../../lib/scss-compiler.js';
-import { readHtml, readScss } from '../../lib/widget-fs.js';
+import { readCssPreview, readHtml, readScss } from '../../lib/widget-fs.js';
 import { resolveOrPick } from '../../lib/widget-picker.js';
 import { sprintf } from '../../utils/sprintf.js';
 export const pushCommand = async ({ id, yes }) => {
@@ -15,11 +16,12 @@ export const pushCommand = async ({ id, yes }) => {
     console.log(chalk.gray(sprintf('Widget #%s (%s)', widgetId, widget.meta.name)));
     const html = readHtml(widget);
     const scssPath = readScss(widget);
+    const cssPreview = readCssPreview(widget);
     const compileSpinner = ora('Compiling SCSS...').start();
     let css;
     try {
         css = compileScss(scssPath);
-        compileSpinner.succeed('SCSS compiled');
+        compileSpinner.succeed(sprintf('SCSS compiled (core %s kB, preview %s kB)', (css.length / 1024).toFixed(1), (cssPreview.length / 1024).toFixed(1)));
     }
     catch (e) {
         compileSpinner.fail('SCSS compilation failed');
@@ -40,8 +42,9 @@ export const pushCommand = async ({ id, yes }) => {
     await api.pushWidget(config.token, widgetId, parsed.widget, config.api_url);
     uploadSpinner.succeed('Elements pushed');
     const cssSpinner = ora('Pushing CSS...').start();
-    await api.updateStyle(config.token, widgetId, { style: css, htmlPreview: html }, config.api_url);
-    cssSpinner.succeed(sprintf('CSS pushed (%s kB)', (css.length / 1024).toFixed(1)));
+    const scssSource = fs.readFileSync(scssPath, 'utf8');
+    await api.updateCss(config.token, widgetId, { css, scss: scssSource, cssPreview, htmlSource: html }, config.api_url);
+    cssSpinner.succeed(sprintf('CSS pushed (core %s kB, preview %s kB)', (css.length / 1024).toFixed(1), (cssPreview.length / 1024).toFixed(1)));
     console.log(chalk.green(sprintf('\n✓ Widget #%s pushed (%s elements, %s kB CSS).', widgetId, parsed.widget.length, (css.length / 1024).toFixed(1))));
     if (yes || !process.stdout.isTTY) {
         return;

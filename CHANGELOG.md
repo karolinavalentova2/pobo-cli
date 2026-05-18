@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-05-15
+
+- `pobo widget ai <id> --image <path>` — generate widget HTML/SCSS from a design image (PNG/JPG/WebP, up to 5 MB).
+- `pobo widget create` — interactive scaffold of a new widget on the server + local files. Creates a starter HTML widget and two stylesheets: `<slug>-<id>-core.scss` (production SCSS using CSS custom properties for every design token) and `<slug>-<id>-preview.css` (plain CSS mirror of those custom properties — edit values to retheme the widget inside the Pobo admin preview canvas).
+- `pobo widget push` — compiles core SCSS to CSS and ships it with the preview CSS file (verbatim) in one call (production stylesheet + editor preview stylesheet).
+- `pobo widget connect` / `disconnect` — connect/disconnect a widget to/from multiple e-shops at once.
+- `pobo widget proxy` — live preview, auto-opens the URL in your browser (`--no-open` to skip).
+- `pobo widget preview [id]` — opens the widget's preview page on Pobo in your browser. Override the host via `POBO_FRONTEND_URL` (defaults to `https://client.pobo.space`).
+- `pobo auth login` — writes a `CLAUDE.md` to your current directory with widget rules + workflow for Claude Code.
+- `pobo init` — re-create `CLAUDE.md` without logging in again.
+- Interactive REPL — run `pobo` with no arguments to enter a shell with Tab autocomplete.
+
 ## [1.0.4] - 2026-05-09
 
 ### Fixed
